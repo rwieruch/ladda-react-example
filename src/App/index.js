@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { fetchList } from '../api';
 
 class App extends Component {
 
@@ -8,8 +9,7 @@ class App extends Component {
   }
 
   getList = (query) => {
-    fetch(`https://hn.algolia.com/api/v1/search?query=${query}&hitsPerPage=200`)
-      .then(response => response.json())
+    fetchList(query)
       .then(({ hits }) => this.setState({ hits }));
   }
 
@@ -20,11 +20,7 @@ class App extends Component {
       <div>
         <button type="button" onClick={() => this.getList('react')}>Fetch React</button>
         <button type="button" onClick={() => this.getList('redux')}>Fetch Redux</button>
-        {
-          hits
-            ? hits.map(item => <div key={item.objectID}>{item.title}</div>)
-            : null
-        }
+        {hits && hits.map(item => <div key={item.objectID}>{item.title}</div>)}
       </div>
     );
   }
