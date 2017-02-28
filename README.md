@@ -1,8 +1,7 @@
-# minimal-react-webpack-babel-setup
+# ladda-react-example
 
-* `git clone git@github.com:rwieruch/minimal-react-webpack-babel-setup.git`
-* cd minimal-react-webpack-babel-setup
+* `git clone git@github.com:rwieruch/ladda-react-example.git`
+* cd ladda-react-example
 * npm install
 * npm start
-
-Read more: [Minimal Setup Tutorial](https://www.robinwieruch.de/minimal-react-webpack-babel-setup/)# ladda-react-example
+* open in browser: `http://localhost:8080/`
