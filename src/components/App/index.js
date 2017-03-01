@@ -8,7 +8,13 @@ const GREEN = '#2fda2f';
 const RED = '#da2f2f';
 
 const getSignalColor = (is) =>
-  ({ color: is ? GREEN : RED })
+  is ? GREEN : RED
+
+const getSignalBackgroundColor = (is) =>
+  ({ background: getSignalColor(is) })
+
+const getSignalTextColor = (is) =>
+  ({ color: getSignalColor(is) })
 
 /* ttl */
 
@@ -25,7 +31,7 @@ const getRemainingToTtl = (timestamp) =>
   getRemainingInS(timestamp + toMs(TTL), Date.now())
 
 const isAfterTtl = (timestamp) =>
-  timestamp + toMs(TTL) > Date.now()
+  timestamp < Date.now() - toMs(TTL)
 
 /* util */
 
@@ -40,8 +46,8 @@ const uniq = ({ value }, i, self) =>
 const getCacheValue = (query) => ({ value }) =>
   value === query
 
-const isExpiredInCache = (cached, query) =>
-  isAfterTtl(cached.find(getCacheValue).timestamp)
+const isExpired = (cached, query) =>
+  isAfterTtl(cached.find(getCacheValue(query)).timestamp);
 
 const isCached = (cached, query) =>
   !!~cached.map(getValues).indexOf(query)
@@ -49,11 +55,32 @@ const isCached = (cached, query) =>
 const updateWasCached = (cached, query) =>
   isCached(cached, query) && !isExpired(cached, query)
 
-const updateCached = (cached, query) =>
-  [
-    ...cached,
-    {value: query, timestamp: Date.now()}
-  ].filter(uniq)
+const updateTimestamoOfExpired = (cached, query) => {
+  const index = cached.findIndex(getCacheValue(query));
+  console.log('Remove', index);
+  const withRemoved = [
+    ...cached.slice(0, index),
+    {value: query, timestamp: Date.now()},
+    ...cached.slice(index + 1),
+  ]
+  console.log(withRemoved, index);
+  return withRemoved;
+}
+
+const updateCached = (cached, query) => {
+  console.log(isCached(cached, query));
+  if (isCached(cached, query)) {
+    console.log(isExpired(cached, query));
+  }
+  return isCached(cached, query) && isExpired(cached, query)
+    ? [
+        ...updateTimestamoOfExpired(cached, query),
+      ].filter(uniq)
+    : [
+        ...cached,
+        {value: query, timestamp: Date.now()}
+      ].filter(uniq)
+}
 
 /* request information */
 
@@ -99,7 +126,7 @@ class App extends Component {
       });
   }
 
-  onNukeCache = () => {
+  onNukeCacheAll = () => {
     api.fakeNukeCache.nuke()
       .then(() => this.setState({ cached: [] }));
   }
@@ -134,7 +161,7 @@ class App extends Component {
           <SideContent>
             <CacheWithMaybe
               cached={cached}
-              onNukeCache={this.onNukeCache}
+              onNukeCacheAll={this.onNukeCacheAll}
             />
           </SideContent>
         </Content>
@@ -155,23 +182,6 @@ const HitItem = ({
 }) =>
   <div className="table-row">
     {item.title}
-  </div>
-
-const Cache = ({
-  cached,
-  onNukeCache,
-}) =>
-  <div>
-    <div className="interactions" style={{ marginBottom: '20px' }}>
-      <Button
-        onClick={onNukeCache}
-      >
-        Nuke Cache
-      </Button>
-    </div>
-    <CacheList
-      cached={cached}
-    />
   </div>
 
 const Search = ({
@@ -205,12 +215,38 @@ const SearchInformation = ({
     />
   </div>
 
-const CacheList = ({ cached }) =>
-  <div className="table">
-    {cached.map(item => <CacheItem key={item.value} item={item} />)}
+const Cache = ({
+  cached,
+  onNukeCacheAll,
+}) =>
+  <div>
+    <div className="interactions" style={{ marginBottom: '20px' }}>
+      <Button
+        onClick={onNukeCacheAll}
+      >
+        Nuke Cache
+      </Button>
+    </div>
+    <CacheList
+      cached={cached}
+    />
   </div>
 
-const CacheItem = ({ item }) =>
+const CacheList = ({
+  cached,
+}) =>
+  <div className="table">
+    {cached.map(item =>
+      <CacheItem
+        key={item.value}
+        item={item}
+      />
+    )}
+  </div>
+
+const CacheItem = ({
+  item,
+}) =>
   <div className="table-row">
     <div style={{ width: '50%' }}>
       {item.value}
@@ -241,14 +277,19 @@ class CountDown extends Component {
   }
 
   tick = () => {
-    this.setState({
-      remaining: getRemainingToTtl(this.props.timestamp)
-    });
+    const remaining = getRemainingToTtl(this.props.timestamp);
+    remaining <= 0
+      ? this.setState({ remaining: 0 })
+      : this.setState({ remaining });
   }
 
   render() {
+    const { remaining } = this.state;
+    const isExpired = remaining <= 0;
     return (
-      <span>{this.state.remaining}</span>
+      <div style={getSignalBackgroundColor(!isExpired)}>
+        {isExpired ? 'expired' : remaining }
+      </div>
     );
   }
 }
@@ -257,7 +298,7 @@ const MsLabel = ({
   ms,
   wasCached,
 }) =>
-  <p style={getSignalColor(wasCached)}>
+  <p style={getSignalTextColor(wasCached)}>
     Request Duration: <strong>{ms} ms</strong>
     &nbsp;
     <MsLabelSuffix wasCached={wasCached} />

@@ -2,7 +2,7 @@ import { build } from 'ladda-cache';
 import * as hackernews from './hackernews';
 import * as fakeNukeCache from './fakeNukeCache';
 
-const TTL = 15;
+const TTL = 5;
 
 const config = {
   hackernews: {
