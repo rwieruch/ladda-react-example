@@ -1,4 +1,6 @@
 import React, { Component } from 'react';
+import Highlight from 'react-highlight';
+import { getList } from '../../api/hackernews';
 import api, { TTL } from '../../api';
 import './style.css';
 
@@ -112,6 +114,10 @@ class App extends Component {
   onSearch = (e, query) => {
     e.preventDefault();
 
+    if (query == '') {
+      return;
+    }
+
     const t0 = performance.now();
 
     api.hackernews.getList(query)
@@ -159,6 +165,7 @@ class App extends Component {
             />
           </SideContent>
         </Content>
+        <LaddaInformation />
       </Page>
     );
   }
@@ -317,14 +324,44 @@ const Button = ({
     {children}
   </button>
 
+const LaddaInformation = () =>
+  <div style={{display: 'flex', justifyContent: 'center' }}>
+    <div style={{margin: '20px'}}>
+      <h2>No Ladda</h2>
+      <Highlight className="js">
+          { "\n" + getList.toString() }
+      </Highlight>
+    </div>
+    <div style={{margin: '20px'}}>
+      <h2>Ladda</h2>
+      <Highlight className="js">
+          {
+            "const getList.operation = 'READ';" +
+            "\n" +
+            getList.toString() +
+            "\n" +
+            "\n" +
+            "const config = {" + "\n" +
+            " hackernews: {" + "\n" +
+            "  ttl: 15," + "\n" +
+            "  api: { getList }" + "\n" +
+            " }" + "\n" +
+            "};" + "\n" +
+            "\n" +
+            "const api = build(config);"
+          }
+      </Highlight>
+    </div>
+  </div>
+
 const withMaybe = (Component, key) => (props) =>
   props[key] && props[key].length
     ? <Component {...props} />
     : null
 
-const HitsListWithMaybe = withMaybe(HitsList, 'list')
-const SearchInformationWithMaybe = withMaybe(SearchInformation, 'cached')
-const CacheWithMaybe = withMaybe(Cache, 'cached')
+const HitsListWithMaybe = withMaybe(HitsList, 'list');
+const SearchInformationWithMaybe = withMaybe(SearchInformation, 'cached');
+const CacheWithMaybe = withMaybe(Cache, 'cached');
 
 const withClassNameContainer = (className) => ({ children }) =>
   <div className={className}>{children}</div>
