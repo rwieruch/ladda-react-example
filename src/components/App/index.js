@@ -57,30 +57,24 @@ const updateWasCached = (cached, query) =>
 
 const updateTimestamoOfExpired = (cached, query) => {
   const index = cached.findIndex(getCacheValue(query));
-  console.log('Remove', index);
-  const withRemoved = [
+  const updatedValue = {value: query, timestamp: Date.now()};
+
+  return [
     ...cached.slice(0, index),
-    {value: query, timestamp: Date.now()},
+    updatedValue,
     ...cached.slice(index + 1),
   ]
-  console.log(withRemoved, index);
-  return withRemoved;
 }
 
-const updateCached = (cached, query) => {
-  console.log(isCached(cached, query));
-  if (isCached(cached, query)) {
-    console.log(isExpired(cached, query));
-  }
-  return isCached(cached, query) && isExpired(cached, query)
+const updateCached = (cached, query) =>
+  isCached(cached, query) && isExpired(cached, query)
     ? [
         ...updateTimestamoOfExpired(cached, query),
-      ].filter(uniq)
+      ]
     : [
         ...cached,
         {value: query, timestamp: Date.now()}
       ].filter(uniq)
-}
 
 /* request information */
 
@@ -244,27 +238,13 @@ const CacheList = ({
     )}
   </div>
 
-const CacheItem = ({
-  item,
-}) =>
-  <div className="table-row">
-    <div style={{ width: '50%' }}>
-      {item.value}
-    </div>
-    <div style={{ width: '50%' }}>
-      <CountDown
-        timestamp={item.timestamp}
-      />
-    </div>
-  </div>
-
-class CountDown extends Component {
+class CacheItem extends Component {
 
   constructor(props) {
     super(props);
 
     this.state = {
-      remaining: getRemainingToTtl(props.timestamp)
+      remaining: getRemainingToTtl(props.item.timestamp)
     }
   }
 
@@ -277,18 +257,25 @@ class CountDown extends Component {
   }
 
   tick = () => {
-    const remaining = getRemainingToTtl(this.props.timestamp);
+    const remaining = getRemainingToTtl(this.props.item.timestamp);
     remaining <= 0
       ? this.setState({ remaining: 0 })
       : this.setState({ remaining });
   }
 
   render() {
+    const { value } = this.props.item;
     const { remaining } = this.state;
     const isExpired = remaining <= 0;
+
     return (
-      <div style={getSignalBackgroundColor(!isExpired)}>
-        {isExpired ? 'expired' : remaining }
+      <div className="table-row" style={getSignalBackgroundColor(!isExpired)}>
+        <div style={{ width: '50%' }}>
+          {value}
+        </div>
+        <div style={{ width: '50%' }}>
+          {isExpired ? 'expired' : <span>TTL: {remaining} s</span> }
+        </div>
       </div>
     );
   }
