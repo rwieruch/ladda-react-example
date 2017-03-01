@@ -2,9 +2,11 @@ import { build } from 'ladda-cache';
 import * as hackernews from './hackernews';
 import * as fakeNukeCache from './fakeNukeCache';
 
+const TTL = 15;
+
 const config = {
   hackernews: {
-    ttl: 60,
+    ttl: TTL,
     api: hackernews
   },
   fakeNukeCache: {
@@ -17,3 +19,7 @@ const config = {
 const api = build(config);
 
 export default api;
+
+export {
+  TTL,
+}
