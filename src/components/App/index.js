@@ -58,81 +58,143 @@ class App extends Component {
   }
 
   render() {
-    const { hits, ...r } = this.state;
+    const {
+      hits,
+      ms,
+      cached,
+      wasCached,
+    } = this.state;
+
     return (
       <div className="page">
-        <Header
-          {...r}
-          onNukeCache={this.onNukeCache}
-          onSearch={this.onSearch}
-        />
-        <ListWithMaybe
-          list={hits}
-        />
+        <Header>
+          <h1>Search Hacker News with Ladda</h1>
+          <Search
+            onSearch={this.onSearch}
+          />
+          <SearchInformationWithMaybe
+            ms={ms}
+            cached={cached}
+            wasCached={wasCached}
+          />
+        </Header>
+        <Content>
+          <MainContent>
+            <HitsListWithMaybe
+              list={hits}
+            />
+          </MainContent>
+          <SideContent>
+            <CacheWithMaybe
+              cached={cached}
+              onNukeCache={this.onNukeCache}
+            />
+          </SideContent>
+        </Content>
       </div>
     );
   }
 }
 
-const List = ({
+const Header = ({
+  children
+}) =>
+  <div className="page-header">
+    {children}
+  </div>
+
+const Content = ({
+  children
+}) =>
+  <div className="page-content">
+    {children}
+  </div>
+
+const MainContent = ({
+  children
+}) =>
+  <div className="page-content-main">
+    {children}
+  </div>
+
+const SideContent = ({
+  children
+}) =>
+  <div className="page-content-side">
+    {children}
+  </div>
+
+const HitsList = ({
   list,
 }) =>
   <div className="table">
-    {list.map(item => <Item key={item.objectID} item={item} />)}
+    {list.map(item => <HitItem key={item.objectID} item={item} />)}
   </div>
 
-const Item = ({
+const HitItem = ({
   item,
 }) =>
   <div className="table-row">
     {item.title}
   </div>
 
-const Header = ({
+const Cache = ({
   cached,
-  ms,
-  wasCached,
-  onSearch,
   onNukeCache,
+}) =>
+  <div>
+    <div className="interactions" style={{ marginBottom: '20px' }}>
+      <Button
+        onClick={onNukeCache}
+      >
+        Nuke Cache
+      </Button>
+    </div>
+    <CacheList
+      cached={cached}
+    />
+  </div>
+
+const Search = ({
+  onSearch,
 }) => {
   let input;
 
   return (
     <form
-      className="search-form"
+      className="interactions"
       onSubmit={(e) => onSearch(e, input.value.toLowerCase())}
     >
-      <p>Search Hacker News with Ladda Cache</p>
-      &nbsp;
       <input ref={node => input = node} />
       <Button type="submit">Search</Button>
-      &nbsp;
-      <MsLabelWithMaybe
-        ms={ms}
-        wasCached={wasCached}
-      />
-      <CacheDashWithMaybe
-        cached={cached}
-      />
-      <CachedLabelWithMaybe
-        cached={cached}
-      />
-      &nbsp;
-      <NukeButtonWithMaybe
-        cached={cached}
-        onClick={onNukeCache}
-      >
-        Nuke Cache
-      </NukeButtonWithMaybe>
     </form>
   );
 }
 
-const CacheDash = () =>
-  <Dash />;
+const SearchInformation = ({
+  ms,
+  cached,
+  wasCached,
+}) =>
+  <div>
+    <MsLabel
+      ms={ms}
+      wasCached={wasCached}
+    />
+    <CacheLabel
+      cached={cached}
+    />
+  </div>
 
-const Dash = () =>
-  <span>&nbsp;-&nbsp;</span>
+const CacheList = ({ cached }) =>
+  <div className="table">
+    {cached.map(item => <CacheItem key={item} item={item} />)}
+  </div>
+
+const CacheItem = ({ item }) =>
+  <div className="table-row">
+    {item}
+  </div>
 
 const MsLabel = ({
   ms,
@@ -151,7 +213,7 @@ const MsLabelSuffix = ({
     ? <span>[Cache Hit]</span>
     : <span>[Cache Miss]</span>
 
-const CachedLabel = ({
+const CacheLabel = ({
   cached
 }) =>
   <p>
@@ -175,10 +237,8 @@ const withMaybe = (Component, key) => (props) =>
     ? <Component {...props} />
     : null
 
-const MsLabelWithMaybe = withMaybe(MsLabel, 'ms')
-const CachedLabelWithMaybe = withMaybe(CachedLabel, 'cached')
-const ListWithMaybe = withMaybe(List, 'list')
-const CacheDashWithMaybe = withMaybe(CacheDash, 'cached')
-const NukeButtonWithMaybe = withMaybe(Button, 'cached')
+const HitsListWithMaybe = withMaybe(HitsList, 'list')
+const SearchInformationWithMaybe = withMaybe(SearchInformation, 'cached')
+const CacheWithMaybe = withMaybe(Cache, 'cached')
 
 export default App;

@@ -4,7 +4,7 @@ import * as fakeNukeCache from './fakeNukeCache';
 
 const config = {
   hackernews: {
-    ttl: 300,
+    ttl: 60,
     api: hackernews
   },
   fakeNukeCache: {
