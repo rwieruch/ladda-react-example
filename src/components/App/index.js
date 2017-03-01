@@ -33,7 +33,7 @@ const getRemainingToTtl = (timestamp) =>
   getRemainingInS(timestamp + toMs(TTL), Date.now())
 
 const isAfterTtl = (timestamp) =>
-  timestamp < Date.now() - toMs(TTL)
+  timestamp <= Date.now() - toMs(TTL)
 
 /* util */
 
@@ -42,6 +42,9 @@ const getValues = ({ value }) =>
 
 const uniq = ({ value }, i, self) =>
   self.map(getValues).indexOf(value) === i
+
+const sum = (a, b) =>
+  a + b;
 
 /* cache information */
 
@@ -80,20 +83,49 @@ const updateCached = (cached, query) =>
 
 /* request information */
 
+const isCacheHit = (v) =>
+  v.isCacheHit
+
+const isNotCacheHit = (v) =>
+  !v.isCacheHit
+
+const getMs = (v) =>
+  +v.ms
+
+const calculateRequestTimeSaved = (requestSummary) => {
+  const cacheMisses = requestSummary.filter(isNotCacheHit);
+  const cacheMissesMs = cacheMisses.map(getMs);
+  const cacheMissesMsAvg = cacheMissesMs.reduce(sum) / cacheMisses.length;
+
+  const cacheHits = requestSummary.filter(isCacheHit);
+  const cacheHitsMs = cacheHits.map(getMs);
+  const cacheHitsMsAvg = cacheHitsMs.reduce(sum) / cacheHits.length;
+
+  return ((cacheMissesMsAvg - cacheHitsMsAvg) * cacheHits.length / 1000).toFixed(2);
+}
+
 const calculateRequestDuration = (t0) =>
   (performance.now() - t0).toFixed(2)
 
-const calculateRequestInfo = (t0) =>
+const calculateRequestInfo = (t0, cached, query) =>
   ({
+    value: query,
     ms: calculateRequestDuration(t0).toString(),
+    isCacheHit: updateWasCached(cached, query),
   })
+
+const updateRequestInfo = (requestSummary, t0, cached, query) =>
+  [
+    ...requestSummary,
+    calculateRequestInfo(t0, cached, query)
+  ]
 
 /* state updates */
 
-const getUpdatedState = (hits, query, t0) => ({ cached }) =>
+const getUpdatedState = (hits, query, t0) => ({ requestSummary, cached }) =>
   ({
     hits,
-    reqInfo: calculateRequestInfo(t0),
+    requestSummary: updateRequestInfo(requestSummary, t0, cached, query),
     cached: updateCached(cached, query),
     wasCached: updateWasCached(cached, query),
   })
@@ -105,7 +137,7 @@ class App extends Component {
 
     this.state = {
       hits: [],
-      reqInfo: null,
+      requestSummary: [],
       cached: [],
       wasCached: false,
     };
@@ -128,13 +160,16 @@ class App extends Component {
 
   onNukeCacheAll = () => {
     api.fakeNukeCache.nuke()
-      .then(() => this.setState({ cached: [] }));
+      .then(() => this.setState({
+        cached: [],
+        requestSummary: []
+      }));
   }
 
   render() {
     const {
       hits,
-      reqInfo,
+      requestSummary,
       cached,
       wasCached,
     } = this.state;
@@ -147,7 +182,7 @@ class App extends Component {
             onSearch={this.onSearch}
           />
           <SearchInformationWithMaybe
-            reqInfo={reqInfo}
+            requestSummary={requestSummary[requestSummary.length - 1]}
             cached={cached}
             wasCached={wasCached}
           />
@@ -163,6 +198,9 @@ class App extends Component {
               cached={cached}
               onNukeCacheAll={this.onNukeCacheAll}
             />
+            <RequestSummaryWithMaybe
+              requestSummary={requestSummary}
+            />
           </SideContent>
         </Content>
         <LaddaInformation />
@@ -171,11 +209,54 @@ class App extends Component {
   }
 }
 
+const RequestSummary = ({
+  requestSummary,
+}) =>
+  <div>
+    <h3>Requests Summary</h3>
+    {
+      requestSummary.filter(v => v.isCacheHit).length > 0 &&
+      <RequestSummaryDescription
+        requestSummary={requestSummary}
+      />
+    }
+    <div className="table">
+      {requestSummary.map(item => <RequestInfoItem key={item.ms} item={item} />)}
+    </div>
+  </div>
+
+const RequestSummaryDescription = ({
+  requestSummary,
+}) =>
+  <ul style={{margin: '10px 0' }}>
+    <li>
+      <strong>{requestSummary.filter(v => v.isCacheHit).length}</strong> of {requestSummary.length} searches hit the cache
+    </li>
+    <li>
+      In average <strong>{calculateRequestTimeSaved(requestSummary)}</strong> s were saved
+    </li>
+  </ul>
+
+const RequestInfoItem = ({
+  item,
+}) =>
+  <div className="table-row" style={getSignalBackgroundColor(item.isCacheHit)}>
+    <div style={{ width: '50%' }}>
+      {item.value}
+    </div>
+    <div style={{ width: '50%' }}>
+      {item.ms} ms
+    </div>
+  </div>
+
 const HitsList = ({
   list,
 }) =>
-  <div className="table">
-    {list.map(item => <HitItem key={item.objectID} item={item} />)}
+  <div>
+    <h3>Search Result</h3>
+    <div className="table">
+      {list.map(item => <HitItem key={item.objectID} item={item} />)}
+    </div>
   </div>
 
 const HitItem = ({
@@ -202,17 +283,13 @@ const Search = ({
 }
 
 const SearchInformation = ({
-  reqInfo,
-  cached,
+  requestSummary,
   wasCached,
 }) =>
   <div>
     <MsLabel
-      ms={reqInfo.ms}
+      ms={requestSummary.ms}
       wasCached={wasCached}
-    />
-    <CacheLabel
-      cached={cached}
     />
   </div>
 
@@ -221,16 +298,17 @@ const Cache = ({
   onNukeCacheAll,
 }) =>
   <div>
-    <div className="interactions" style={{ marginBottom: '20px' }}>
+    <h3>Cache</h3>
+    <CacheList
+      cached={cached}
+    />
+    <div className="interactions">
       <Button
         onClick={onNukeCacheAll}
       >
         Nuke Cache
       </Button>
     </div>
-    <CacheList
-      cached={cached}
-    />
   </div>
 
 const CacheList = ({
@@ -305,13 +383,6 @@ const MsLabelSuffix = ({
     ? <span>[Cache Hit]</span>
     : <span>[Cache Miss]</span>
 
-const CacheLabel = ({
-  cached
-}) =>
-  <p>
-    All Cached Requests: <strong>{cached.map(getValues).join(', ' )}</strong>
-  </p>
-
 const Button = ({
   type = 'button',
   onClick = () => {},
@@ -362,6 +433,7 @@ const withMaybe = (Component, key) => (props) =>
 const HitsListWithMaybe = withMaybe(HitsList, 'list');
 const SearchInformationWithMaybe = withMaybe(SearchInformation, 'cached');
 const CacheWithMaybe = withMaybe(Cache, 'cached');
+const RequestSummaryWithMaybe = withMaybe(RequestSummary, 'requestSummary');
 
 const withClassNameContainer = (className) => ({ children }) =>
   <div className={className}>{children}</div>
