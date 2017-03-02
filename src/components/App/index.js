@@ -128,6 +128,7 @@ const getUpdatedState = (hits, query, t0) => ({ requestSummary, cached }) =>
     requestSummary: updateRequestInfo(requestSummary, t0, cached, query),
     cached: updateCached(cached, query),
     wasCached: updateWasCached(cached, query),
+    isLoading: false,
   })
 
 class App extends Component {
@@ -150,6 +151,7 @@ class App extends Component {
       return;
     }
 
+    this.setState({ isLoading: true });
     const t0 = performance.now();
 
     api.hackernews.getList(query)
@@ -172,6 +174,7 @@ class App extends Component {
       requestSummary,
       cached,
       wasCached,
+      isLoading,
     } = this.state;
 
     return (
@@ -179,12 +182,14 @@ class App extends Component {
         <Header>
           <h1>Search Hacker News with Ladda</h1>
           <Search
+            isDisabled={isLoading}
             onSearch={this.onSearch}
           />
-          <SearchInformationWithMaybe
-            requestSummary={requestSummary[requestSummary.length - 1]}
+          <SearchInformationWithMaybeWithLoading
             cached={cached}
+            isLoading={isLoading}
             wasCached={wasCached}
+            requestSummary={requestSummary[requestSummary.length - 1]}
           />
         </Header>
         <Content>
@@ -230,10 +235,14 @@ const RequestSummaryDescription = ({
 }) =>
   <ul style={{margin: '10px 0' }}>
     <li>
-      <strong>{requestSummary.filter(v => v.isCacheHit).length}</strong> of {requestSummary.length} searches hit the cache
+      <small>
+        <strong>{requestSummary.filter(v => v.isCacheHit).length}</strong> of {requestSummary.length} searches hit the cache
+      </small>
     </li>
     <li>
-      In average <strong>{calculateRequestTimeSaved(requestSummary)}</strong> s were saved
+      <small>
+        <strong>{calculateRequestTimeSaved(requestSummary)}</strong> seconds in average were saved due cache
+      </small>
     </li>
   </ul>
 
@@ -267,6 +276,7 @@ const HitItem = ({
   </div>
 
 const Search = ({
+  isDisabled,
   onSearch,
 }) => {
   let input;
@@ -277,7 +287,12 @@ const Search = ({
       onSubmit={(e) => onSearch(e, input.value.toLowerCase())}
     >
       <input ref={node => input = node} />
-      <Button type="submit">Search</Button>
+      <Button
+        isDisabled={isDisabled}
+        type="submit"
+      >
+        Search
+      </Button>
     </form>
   );
 }
@@ -386,9 +401,11 @@ const MsLabelSuffix = ({
 const Button = ({
   type = 'button',
   onClick = () => {},
+  isDisabled = false,
   children,
 }) =>
   <button
+    disabled={isDisabled}
     type={type}
     onClick={onClick}
   >
@@ -431,7 +448,6 @@ const withMaybe = (Component, key) => (props) =>
     : null
 
 const HitsListWithMaybe = withMaybe(HitsList, 'list');
-const SearchInformationWithMaybe = withMaybe(SearchInformation, 'cached');
 const CacheWithMaybe = withMaybe(Cache, 'cached');
 const RequestSummaryWithMaybe = withMaybe(RequestSummary, 'requestSummary');
 
@@ -443,5 +459,11 @@ const Header = withClassNameContainer("page-header");
 const Content = withClassNameContainer("page-content");
 const MainContent = withClassNameContainer("page-content-main");
 const SideContent = withClassNameContainer("page-content-side");
+
+const withLoading = (Component) => ({ isLoading, ...r }) =>
+  isLoading ? <p>Loading ...</p> : <Component { ...r } />
+
+const SearchInformationWithMaybe = withMaybe(SearchInformation, 'cached');
+const SearchInformationWithMaybeWithLoading = withLoading(SearchInformationWithMaybe);
 
 export default App;
