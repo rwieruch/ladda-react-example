@@ -10,7 +10,7 @@ const config = {
     api: hackernews
   },
   fakeNukeCache: {
-    invalidates: ['hackernews(*)'],
+    invalidates: ['hackernews'],
     invalidatesOn: ['DELETE'],
     api: fakeNukeCache
   },

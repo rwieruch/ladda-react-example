@@ -417,26 +417,24 @@ const LaddaInformation = () =>
     <div style={{margin: '20px'}}>
       <h2>No Ladda</h2>
       <Highlight className="js">
-          { "\n" + getList.toString() }
+          {
+            "const BASE_URL = 'https://hn.algolia.com/api/v1/';" +
+            "\n\n\n\n" +
+            getList.toString()
+          }
       </Highlight>
     </div>
     <div style={{margin: '20px'}}>
       <h2>Ladda</h2>
       <Highlight className="js">
           {
+            "const BASE_URL = 'https://hn.algolia.com/api/v1/';" +
+            "\n\n" +
+            "getList.idFrom = v => v.objectID" +
+            "\n" +
             "const getList.operation = 'READ';" +
             "\n" +
-            getList.toString() +
-            "\n" +
-            "\n" +
-            "const config = {" + "\n" +
-            " hackernews: {" + "\n" +
-            "  ttl: 15," + "\n" +
-            "  api: { getList }" + "\n" +
-            " }" + "\n" +
-            "};" + "\n" +
-            "\n" +
-            "const api = build(config);"
+            getList.toString()
           }
       </Highlight>
     </div>
