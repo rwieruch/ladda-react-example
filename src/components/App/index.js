@@ -7,6 +7,10 @@ import api, { TTL } from '../../api';
 
 import './style.css';
 
+const PAGE_URL = window.location.href;
+const TWITTER_HANDLE = '@smallimprove';
+const SHARE_TITLE = 'Ladda - an independent, lightweight caching solution for your JavaScript application';
+
 /* style */
 
 const GREEN = '#2fda2f';
@@ -104,7 +108,13 @@ const calculateRequestTimeSaved = (requestSummary) => {
   const cacheHitsMs = cacheHits.map(getMs);
   const cacheHitsMsAvg = cacheHitsMs.reduce(sum) / cacheHits.length;
 
-  return ((cacheMissesMsAvg - cacheHitsMsAvg) * cacheHits.length / 1000).toFixed(2);
+  const estimatedAbsolute = ((cacheMissesMsAvg - cacheHitsMsAvg) * cacheHits.length / 1000).toFixed(2);
+  const average = (cacheMissesMsAvg / 1000).toFixed(2);
+
+  return {
+    estimatedAbsolute,
+    average,
+  };
 }
 
 const calculateRequestDuration = (t0) =>
@@ -159,7 +169,7 @@ class App extends Component {
     const t0 = performance.now();
 
     api.hackernews.getList(query)
-      .then(({ hits }) => {
+      .then((hits) => {
         this.setState(getUpdatedState(hits, query, t0));
       });
   }
@@ -185,6 +195,8 @@ class App extends Component {
       <Page>
         <Header>
           <h1>Search Hacker News with Ladda</h1>
+          <p>Read about Ladda: <a href="#">Introduction</a> | <a href="https://petercrona.gitbooks.io/ladda/">Documentation</a></p>
+          <p>Share: <Twitter /> | <Facebook /> | <Reddit /></p>
           <Search
             isDisabled={isLoading}
             onSearch={this.onSearch}
@@ -236,19 +248,32 @@ const RequestSummary = ({
 
 const RequestSummaryDescription = ({
   requestSummary,
-}) =>
-  <ul style={{margin: '10px 0' }}>
-    <li>
-      <small>
-        <strong>{requestSummary.filter(v => v.isCacheHit).length}</strong> of {requestSummary.length} searches hit the cache
-      </small>
-    </li>
-    <li>
-      <small>
-        <strong>{calculateRequestTimeSaved(requestSummary)}</strong> seconds in average were saved due cache
-      </small>
-    </li>
-  </ul>
+}) => {
+  const {
+    average,
+    estimatedAbsolute,
+  } = calculateRequestTimeSaved(requestSummary);
+
+  return (
+    <ul style={{margin: '10px 0' }}>
+      <li>
+        <small>
+          <strong>{requestSummary.filter(v => v.isCacheHit).length}</strong> of {requestSummary.length} searches hit the cache
+        </small>
+      </li>
+      <li>
+        <small>
+          <strong>~ {estimatedAbsolute}</strong> seconds were saved in total due cache
+        </small>
+      </li>
+      <li>
+        <small>
+          <strong>~ {average}</strong> seconds were saved for each cache hit request
+        </small>
+      </li>
+    </ul>
+  );
+}
 
 class RequestInfoItem extends Component {
 
@@ -286,7 +311,7 @@ const HitItem = ({
   item,
 }) =>
   <div className="table-row">
-    {item.title}
+    {item.title || item.story_title}
   </div>
 
 const Search = ({
@@ -427,14 +452,18 @@ const Button = ({
   </button>
 
 const LaddaInformation = () =>
-  <div style={{display: 'flex', justifyContent: 'center' }}>
+  <div style={{margin: '20px', display: 'flex', justifyContent: 'center' }}>
     <div style={{margin: '20px'}}>
       <h2>No Ladda</h2>
       <Highlight className="js">
           {
-            "const BASE_URL = 'https://hn.algolia.com/api/v1/';" +
-            "\n\n\n\n" +
-            getList.toString()
+            "const API_LIST_URL = 'https://some-domain/api/v1/list';" +
+            "\n\n\n" +
+            "function getList(query) {" + "\n" +
+            "  const url = `${SOME_API_LIST_URL}?query=${query};" + "\n" +
+            "  return fetch(url)" + "\n" +
+            "    .then(response => response.json());" + "\n" +
+            "}"
           }
       </Highlight>
     </div>
@@ -442,26 +471,27 @@ const LaddaInformation = () =>
       <h2>Ladda</h2>
       <Highlight className="js">
           {
-            "const BASE_URL = 'https://hn.algolia.com/api/v1/';" +
-            "\n\n" +
-            "getList.idFrom = v => v.objectID" +
-            "\n" +
-            "const getList.operation = 'READ';" +
-            "\n" +
-            getList.toString()
+            "const API_LIST_URL = 'https://some-domain/api/v1/list';" + "\n\n" +
+            "getList.operation = 'READ';" + "\n" +
+            "function getList(query) {" + "\n" +
+            "  const url = `${SOME_API_LIST_URL}?query=${query};" + "\n" +
+            "  return fetch(url)" + "\n" +
+            "    .then(response => response.json());" + "\n" +
+            "}"
           }
       </Highlight>
     </div>
   </div>
 
-const withMaybe = (Component, key) => (props) =>
-  props[key] && props[key].length
+const withMaybe = (Component, fn) => (props) =>
+  fn(props)
     ? <Component {...props} />
     : null
 
-const HitsListWithMaybe = withMaybe(HitsList, 'list');
-const CacheWithMaybe = withMaybe(Cache, 'cached');
-const RequestSummaryWithMaybe = withMaybe(RequestSummary, 'requestSummary');
+const HitsListWithMaybe = withMaybe(HitsList, ({ list }) => list && list.length);
+const CacheWithMaybe = withMaybe(Cache, ({ cached }) => cached && cached.length);
+const RequestSummaryWithMaybe = withMaybe(RequestSummary, ({ requestSummary: rs }) => rs && rs.length);
+const SearchInformationWithMaybe = withMaybe(SearchInformation, ({ cached }) => cached && cached.length);
 
 const withClassNameContainer = (className) => ({ children }) =>
   <div className={className}>{children}</div>
@@ -475,7 +505,60 @@ const SideContent = withClassNameContainer("page-content-side");
 const withLoading = (Component) => ({ isLoading, ...r }) =>
   isLoading ? <p>Loading ...</p> : <Component { ...r } />
 
-const SearchInformationWithMaybe = withMaybe(SearchInformation, 'cached');
 const SearchInformationWithMaybeWithLoading = withLoading(SearchInformationWithMaybe);
+
+class Twitter extends Component {
+
+  constructor(props) {
+    super(props);
+
+    this.share = this.share.bind(this);
+  }
+
+  share(event) {
+    const href = `https://twitter.com/share?text=${SHARE_TITLE} by ${TWITTER_HANDLE}&url=${PAGE_URL}`;
+    window.open(href, 'twitter-share', 'width=550,height=235');
+    event.preventDefault();
+  }
+
+  render() {
+    return (
+      <a href="#" onClick={this.share}>
+        Twitter
+      </a>
+    );
+  }
+}
+
+class Facebook extends Component {
+
+  constructor(props) {
+    super(props);
+
+    this.share = this.share.bind(this);
+  }
+
+  share(event) {
+    const href = `https://www.facebook.com/sharer/sharer.php?u=${PAGE_URL}`;
+    window.open(href, 'facebook-share','width=580,height=296');
+    event.preventDefault();
+  }
+
+  render() {
+    return (
+      <a href="#" onClick={this.share}>
+        Facebook
+      </a>
+    );
+  }
+}
+
+const Reddit = () =>
+  <a
+    target="_blank"
+    href={`http://reddit.com/submit?url=${PAGE_URL}&title=${SHARE_TITLE}`}
+  >
+    Reddit
+  </a>
 
 export default App;
