@@ -1,7 +1,10 @@
 import React, { Component } from 'react';
 import Highlight from 'react-highlight';
+import uuid from 'uuid/v1';
+
 import { getList } from '../../api/hackernews';
 import api, { TTL } from '../../api';
+
 import './style.css';
 
 /* style */
@@ -109,6 +112,7 @@ const calculateRequestDuration = (t0) =>
 
 const calculateRequestInfo = (t0, cached, query) =>
   ({
+    id: uuid(),
     value: query,
     ms: calculateRequestDuration(t0).toString(),
     isCacheHit: updateWasCached(cached, query),
@@ -208,7 +212,7 @@ class App extends Component {
             />
           </SideContent>
         </Content>
-        <LaddaInformation />
+        { !hits.length && <LaddaInformation />}
       </Page>
     );
   }
@@ -226,7 +230,7 @@ const RequestSummary = ({
       />
     }
     <div className="table">
-      {requestSummary.map(item => <RequestInfoItem key={item.ms} item={item} />)}
+      {requestSummary.map(item => <RequestInfoItem key={item.id} item={item} />)}
     </div>
   </div>
 
@@ -246,17 +250,27 @@ const RequestSummaryDescription = ({
     </li>
   </ul>
 
-const RequestInfoItem = ({
-  item,
-}) =>
-  <div className="table-row" style={getSignalBackgroundColor(item.isCacheHit)}>
-    <div style={{ width: '50%' }}>
-      {item.value}
-    </div>
-    <div style={{ width: '50%' }}>
-      {item.ms} ms
-    </div>
-  </div>
+class RequestInfoItem extends Component {
+
+  shouldComponentUpdate() {
+    return false;
+  }
+
+  render() {
+    const { item } = this.props;
+    return (
+      <div className="table-row" style={getSignalBackgroundColor(item.isCacheHit)}>
+        <div style={{ width: '50%' }}>
+          {item.value}
+        </div>
+        <div style={{ width: '50%' }}>
+          {item.ms} ms
+        </div>
+      </div>
+    );
+  }
+
+}
 
 const HitsList = ({
   list,
