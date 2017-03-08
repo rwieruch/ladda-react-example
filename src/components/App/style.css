@@ -30,6 +30,8 @@
 
 .table-row {
   display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
   line-height: 24px;
   white-space: nowrap;
   margin-bottom: 10px;
@@ -40,8 +42,8 @@
 
 .table-row > span {
   overflow: hidden;
-  text-overflow:
-  ellipsis; padding: 0 5px;
+  text-overflow: ellipsis;
+  padding: 0 5px;
 }
 
 .button-inline {
@@ -56,4 +58,11 @@
 .button-active {
   border-radius: 0;
   border-bottom: 1px solid #38BB6C;
+}
+
+.ladda-information {
+  margin: 20px;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
 }

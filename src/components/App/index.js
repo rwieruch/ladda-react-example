@@ -195,7 +195,12 @@ class App extends Component {
       <Page>
         <Header>
           <h1>Search Hacker News with Ladda</h1>
-          <p>Read about Ladda: <a href="#">Introduction</a> | <a href="https://petercrona.gitbooks.io/ladda/">Documentation</a></p>
+          <p>
+            Read about Ladda:&nbsp;
+            <a href="https://tech.small-improvements.com/">Introduction</a>
+            &nbsp;|&nbsp;
+            <a href="https://petercrona.gitbooks.io/ladda/">Documentation</a>
+          </p>
           <p>Share: <Twitter /> | <Facebook /> | <Reddit /></p>
           <Search
             isDisabled={isLoading}
@@ -285,12 +290,12 @@ class RequestInfoItem extends Component {
     const { item } = this.props;
     return (
       <div className="table-row" style={getSignalBackgroundColor(item.isCacheHit)}>
-        <div style={{ width: '50%' }}>
+        <span>
           {item.value}
-        </div>
-        <div style={{ width: '50%' }}>
+        </span>
+        <span>
           {item.ms} ms
-        </div>
+        </span>
       </div>
     );
   }
@@ -311,7 +316,7 @@ const HitItem = ({
   item,
 }) =>
   <div className="table-row">
-    {item.title || item.story_title}
+    <span>{item.title || item.story_title}</span>
   </div>
 
 const Search = ({
@@ -409,12 +414,12 @@ class CacheItem extends Component {
 
     return (
       <div className="table-row" style={getSignalBackgroundColor(!isExpired)}>
-        <div style={{ width: '50%' }}>
+        <span>
           {value}
-        </div>
-        <div style={{ width: '50%' }}>
+        </span>
+        <span>
           {isExpired ? 'expired' : <span>TTL: {remaining} s</span> }
-        </div>
+        </span>
       </div>
     );
   }
@@ -452,7 +457,7 @@ const Button = ({
   </button>
 
 const LaddaInformation = () =>
-  <div style={{margin: '20px', display: 'flex', justifyContent: 'center' }}>
+  <div className="ladda-information">
     <div style={{margin: '20px'}}>
       <h2>No Ladda</h2>
       <Highlight className="js">
