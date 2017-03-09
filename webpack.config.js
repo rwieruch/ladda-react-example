@@ -33,6 +33,9 @@ module.exports = {
   plugins: [
     new webpack.HotModuleReplacementPlugin(),
     new webpack.ProvidePlugin({
+      Promise: 'es6-promise-promise'
+    }),
+    new webpack.ProvidePlugin({
       'fetch': 'imports-loader?this=>global!exports-loader?global.fetch!whatwg-fetch'
     }),
     new webpack.DefinePlugin({

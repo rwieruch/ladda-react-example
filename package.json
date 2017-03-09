@@ -33,6 +33,7 @@
     "webpack-dev-server": "^2.4.1"
   },
   "dependencies": {
+    "es6-promise-promise": "^1.0.0",
     "ladda-cache": "^0.1.2",
     "react": "^15.4.2",
     "react-dom": "^15.4.2",
